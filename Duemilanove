@@ -1,0 +1,182 @@
+#include <Adafruit_NeoPixel.h>
+
+#define PIN 6
+#define REMOTE_PIN 2
+
+int remoteValue;
+int selectedProgram = 0;
+int previousProgram;
+
+long debouncing_time = 1000; //Debouncing Time in Milliseconds
+volatile unsigned long last_micros;
+
+// Parameter 1 = number of pixels in strip
+// Parameter 2 = Arduino pin number (most are valid)
+// Parameter 3 = pixel type flags, add together as needed:
+//   NEO_KHZ800  800 KHz bitstream (most NeoPixel products w/WS2812 LEDs)
+//   NEO_KHZ400  400 KHz (classic 'v1' (not v2) FLORA pixels, WS2811 drivers)
+//   NEO_GRB     Pixels are wired for GRB bitstream (most NeoPixel products)
+//   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(119, PIN, NEO_GRB + NEO_KHZ800);
+void setup() {
+  strip.begin();
+  strip.show(); // Initialize all pixels to 'off'
+  attachInterrupt(0, debounceInterrupt, CHANGE);
+  Serial.begin(9600);
+}
+void loop() {
+     Serial.println("Previous Program:");
+     Serial.println(previousProgram);
+     Serial.println("Selected Program:");
+     Serial.println(selectedProgram);
+     previousProgram = selectedProgram;
+     switch (selectedProgram) {
+      case 0:
+        Serial.println("colorWipeYellow Start");
+        colorWipe(strip.Color(255, 255, 0), 25); // Yellow
+        Serial.println("colorWipeYellow End");
+        break;
+       case 1:
+        Serial.println("colorWipeRed Start");
+        colorWipe(strip.Color(255, 0, 0), 25); // Red
+        Serial.println("colorWipeRed End");
+        break;
+      case 2:
+        Serial.println("rainbowCycle Start");
+        rainbowCycle(25);
+        Serial.println("rainbowCycle End");
+        break;
+      case 3:
+        Serial.println("colorWipeWhite Start");
+        colorWipe(strip.Color(127, 127, 127), 25); // White
+        Serial.println("colorWipeWhite End");
+        break;
+      case 4:
+        Serial.println("colorWipeBlue Start");
+        colorWipe(strip.Color(0, 0, 255), 25); // White
+        Serial.println("colorWipeBlue End");
+        break;
+      case 5:
+        Serial.println("theaterChaseRainbow Start");
+        //colorWipe(strip.Color(127, 127, 127), 25); // White
+        theaterChaseRainbow(25);
+        Serial.println("theaterChaseRainbow End");
+        break;
+      case 6:
+        Serial.println("theaterChaseRainbow Start");
+        colorWipe(strip.Color(0, 128, 0), 25); // Green
+        Serial.println("theaterChaseRainbow End");
+        break;
+
+     }
+    delay(1);
+}
+
+void rainbowCycle(uint8_t wait) {
+  uint16_t i, j;
+
+  for(j=0; j<256*5; j++) { // 5 cycles of all colors on wheel
+    if (previousProgram != selectedProgram){
+      Serial.println("Breaking!");
+      break;
+      }
+    else{
+      for(i=0; i< strip.numPixels(); i++) {
+        if (previousProgram != selectedProgram){
+          Serial.println("Breaking!");
+          break;
+        }
+        else{
+          strip.setPixelColor(i, Wheel(((i * 256 / strip.numPixels()) + j) & 255));
+        }
+      }
+      strip.show();
+      delay(wait);
+    }
+  }
+}
+
+void theaterChaseRainbow(uint8_t wait) {
+  for (int j=0; j < 256; j++) {     // cycle all 256 colors in the wheel
+    if (previousProgram != selectedProgram){
+      Serial.println("Breaking!");
+      break;
+      }
+    else{
+      for (int q=0; q < 3; q++) {
+          if (previousProgram != selectedProgram){
+              Serial.println("Breaking!");
+                break;
+          }
+          else{
+            for (int i=0; i < strip.numPixels(); i=i+3) {
+              if (previousProgram != selectedProgram){
+                Serial.println("Breaking!");
+                  break;
+              }
+              else{
+                strip.setPixelColor(i+q, Wheel( (i+j) % 255));    //turn every third pixel on
+              }
+            }
+            strip.show();
+          }
+     
+      delay(wait);
+     
+      for (int i=0; i < strip.numPixels(); i=i+3) {
+        if (previousProgram != selectedProgram){
+              Serial.println("Breaking!");
+                break;
+          }
+        else{
+          strip.setPixelColor(i+q, 0);        //turn every third pixel off
+        }
+      }
+     }
+    }
+  }
+}
+
+uint32_t Wheel(byte WheelPos) {
+  if(WheelPos < 85) {
+   return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+  } else if(WheelPos < 170) {
+   WheelPos -= 85;
+   return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+  } else {
+   WheelPos -= 170;
+   return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+  }
+}
+
+
+void debounceInterrupt() {
+  if((long)(micros() - last_micros) >= debouncing_time * 1000) {
+    changeProgram();
+    last_micros = micros();
+  }
+}
+  
+void changeProgram(){
+  Serial.println("Changing Program");
+  if(selectedProgram == 6){
+      selectedProgram = 0;
+    }  
+    else{
+      selectedProgram++;
+   }
+}
+
+void colorWipe(uint32_t c, uint8_t wait) {
+  for(uint16_t i=0; i<strip.numPixels(); i++) {
+    if (previousProgram != selectedProgram){
+      Serial.println("Breaking!");
+        break;
+    }
+    else{
+        strip.setPixelColor(i, c);
+          strip.show();
+          delay(wait);
+    }
+  }
+}
